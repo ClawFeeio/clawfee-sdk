@@ -4,6 +4,8 @@ import type {
   ChargeResult,
   BalanceResult,
   PaymentLinkResult,
+  ChargeCustomOptions,
+  ChargeCustomResult,
   ResolvedConfig,
 } from './types'
 
@@ -83,8 +85,10 @@ export class ClawFee {
     this.clearCache(userId)
     return {
       charged: false,
-      balance: data.balance,
+      balance: data.balance ?? 0,
       paymentUrl: data.payment_url,
+      subscribeUrl: data.subscribe_url,
+      reason: data.reason,
       message: data.message ?? 'Insufficient balance. Please top up to continue.',
     }
   }
@@ -122,6 +126,30 @@ export class ClawFee {
       orderId: data.order_id,
       expiresAt: new Date(data.expires_at),
       amount: data.amount,
+    }
+  }
+
+  /**
+   * Generate a payment order with a custom amount.
+   *
+   * Returns a payment URL for the user to complete payment.
+   * After payment is confirmed, funds are automatically settled to developer earnings.
+   */
+  async chargeCustom(userId: string, options: ChargeCustomOptions): Promise<ChargeCustomResult> {
+    const body: Record<string, unknown> = {
+      user_id: userId,
+      amount: options.amount,
+      ...(options.description ? { description: options.description } : {}),
+      ...(options.topupAmount ? { topup_amount: options.topupAmount } : {}),
+    }
+
+    const data = await this.request('POST', '/billing/charge-custom', body)
+
+    return {
+      orderId: data.orderId,
+      paymentUrl: data.paymentUrl,
+      amount: data.amount,
+      description: data.description ?? '',
     }
   }
 

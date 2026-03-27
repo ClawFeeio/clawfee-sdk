@@ -37,8 +37,12 @@ export interface ChargeResult {
   chargedAmount?: number
   /** Transaction ID (only present when charged=true) */
   transactionId?: string
-  /** Payment URL (only present when charged=false) */
+  /** Payment URL (only present when charged=false and balance is insufficient) */
   paymentUrl?: string
+  /** Subscribe URL (only present when charged=false and reason is subscription_required) */
+  subscribeUrl?: string
+  /** Failure reason: 'subscription_required' or undefined for balance-insufficient */
+  reason?: string
   /** Human-readable message */
   message?: string
 }
@@ -53,6 +57,26 @@ export interface PaymentLinkResult {
   orderId: string
   expiresAt: Date
   amount: number
+}
+
+export interface ChargeCustomOptions {
+  /** Charge amount in USDT (0.1 ~ 1000) */
+  amount: number
+  /** Optional description shown on the payment page */
+  description?: string
+  /** Optional top-up amount if different from charge amount */
+  topupAmount?: number
+}
+
+export interface ChargeCustomResult {
+  /** Payment order ID */
+  orderId: string
+  /** URL to redirect the user for payment */
+  paymentUrl: string
+  /** Charge amount in USDT */
+  amount: number
+  /** Description shown on the payment page */
+  description: string
 }
 
 export interface ResolvedConfig {

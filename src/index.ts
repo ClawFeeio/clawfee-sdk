@@ -5,4 +5,6 @@ export type {
   ChargeResult,
   BalanceResult,
   PaymentLinkResult,
+  ChargeCustomOptions,
+  ChargeCustomResult,
 } from './types'
