@@ -31,16 +31,8 @@ export class ClawFee {
         'API key is required. Please set the CLAWFEE_API_KEY environment variable and pass it as the apiKey parameter.'
       )
     }
-    if (!config.skillId) {
-      throw new ClawFeeError(
-        'MISSING_SKILL_ID',
-        'Skill ID is required. Please set the CLAWFEE_SKILL_ID environment variable and pass it as the skillId parameter.'
-      )
-    }
-
     this.config = {
       apiKey: config.apiKey,
-      skillId: config.skillId,
       baseUrl: (config.baseUrl ?? 'https://clawfee.io/api/v1').replace(/\/+$/, ''),
       timeout: config.timeout ?? 10000,
       cache: {
@@ -79,6 +71,8 @@ export class ClawFee {
         balance: data.balance,
         chargedAmount: data.charged,
         transactionId: data.transaction_id,
+        source: data.source,
+        callsRemaining: data.calls_remaining ?? data.callsRemaining,
       }
     }
 
@@ -161,7 +155,9 @@ export class ClawFee {
   // ─── Internal methods ───
 
   private getCacheKey(userId: string): string {
-    return `${this.config.skillId}:${userId}`
+    // Use first 8 chars of apiKey as namespace (unique per Skill)
+    const namespace = this.config.apiKey.substring(0, 8)
+    return `${namespace}:${userId}`
   }
 
   private getCache(userId: string): number | null {

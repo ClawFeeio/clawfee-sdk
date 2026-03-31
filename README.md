@@ -41,10 +41,9 @@ import { ClawFee } from 'clawfee-sdk'
 
 const pay = new ClawFee({
   apiKey: process.env.CLAWFEE_API_KEY!,
-  skillId: process.env.CLAWFEE_SKILL_ID!,
 })
 
-// Before running your AI skill — charge the user first
+// Charge the user before running your skill
 const result = await pay.charge('user_123')
 if (!result.charged) return { paymentUrl: result.paymentUrl }
 
@@ -86,7 +85,6 @@ if (result.charged) {
   console.log('Amount deducted:', result.chargedAmount)
 } else {
   // Insufficient balance — send user to top-up page
-  // 余额不足，引导用户充值
   return { redirect: result.paymentUrl }
 }
 ```
@@ -122,8 +120,13 @@ if (!result.charged) {
     // User has never subscribed — redirect to subscribe page
     return { redirect: result.subscribeUrl }
   } else {
-    // Quota exhausted — redirect to top-up page
-    return { redirect: result.paymentUrl }
+      // Quota exceeded, balance insufficient
+      // Option 1: Use platform default top-up amount
+      redirect(result.paymentUrl)
+ 
+      // Option 2: Custom top-up amount
+      // const link = await pay.getPaymentLink('user_123', 20)
+      // redirect(link.paymentUrl)
   }
 }
 
@@ -140,13 +143,15 @@ Developers do not need to call any subscription API. ClawFee handles subscriptio
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `charged` | `boolean` | `true` if quota deduction succeeded |
-| `balance` | `number` | Remaining quota calls |
-| `chargedAmount` | `number \| undefined` | Calls deducted (only when `charged: true`) |
-| `transactionId` | `string \| undefined` | Transaction ID (only when `charged: true`) |
-| `reason` | `string \| undefined` | `'subscription_required'` if user is not subscribed |
-| `subscribeUrl` | `string \| undefined` | Subscribe URL (only when `reason === 'subscription_required'`) |
-| `paymentUrl` | `string \| undefined` | Top-up URL (when quota is exhausted) |
+| `charged` | `boolean` | `true` if charge or quota deduction succeeded |
+| `balance` | `number` | Current balance in USDT |
+| `source` | `string \| undefined` | `'subscription'` when quota was used |
+| `callsRemaining` | `number \| undefined` | Remaining quota calls this month |
+| `chargedAmount` | `number \| undefined` | Amount deducted for overage charges |
+| `transactionId` | `string \| undefined` | Transaction ID |
+| `reason` | `string \| undefined` | `'subscription_required'` if not subscribed |
+| `subscribeUrl` | `string \| undefined` | Subscribe URL |
+| `paymentUrl` | `string \| undefined` | Top-up URL when quota exhausted |
 | `message` | `string \| undefined` | Human-readable failure message |
 
 ---
@@ -191,14 +196,12 @@ import { ClawFee } from 'clawfee-sdk'
 
 const pay = new ClawFee({
   apiKey: process.env.CLAWFEE_API_KEY!,
-  skillId: process.env.CLAWFEE_SKILL_ID!,
 })
 ```
 
 | Parameter | Type | Required | Default | Description |
 |-----------|------|----------|---------|-------------|
 | `apiKey` | `string` | ✅ | — | API Key for your Skill |
-| `skillId` | `string` | ✅ | — | Skill ID from the dashboard |
 | `baseUrl` | `string` | — | `https://clawfee.io/api/v1` | API base URL |
 | `timeout` | `number` | — | `10000` | Request timeout in milliseconds |
 | `cache.enabled` | `boolean` | — | `true` | Enable local balance cache |
@@ -206,7 +209,9 @@ const pay = new ClawFee({
 | `retry.maxAttempts` | `number` | — | `3` | Max retry attempts on network failure |
 | `retry.delay` | `number` | — | `1000` | Base retry delay in milliseconds (multiplied by attempt number) |
 
-Throws `ClawFeeError('MISSING_API_KEY')` or `ClawFeeError('MISSING_SKILL_ID')` if required fields are absent.
+Throws `ClawFeeError('MISSING_API_KEY')` if `apiKey` is absent.
+
+> **`skillId` is no longer required.** If you are upgrading from an older version, you can safely remove `skillId` from your config — passing it is harmless but has no effect.
 
 ---
 
@@ -267,6 +272,11 @@ const { balance } = await pay.getBalance('user_123')
 console.log(`Balance: ${balance} USDT`)
 ```
 
+| Field | Type | Description |
+|-------|------|-------------|
+| `balance` | `string` | User balance in USDT (6 decimal places) |
+| `userId` | `string` | User identifier |
+
 ---
 
 ### `pay.getPaymentLink(userId, amount?)`
@@ -316,7 +326,7 @@ try {
         // API Key is invalid or expired — check environment variables
         break
       case 'SKILL_NOT_FOUND':
-        // Skill not found or disabled — verify CLAWFEE_SKILL_ID
+        // Skill not found or disabled — check your API Key
         break
       case 'RATE_LIMITED':
         // Too many requests — back off and retry
@@ -336,9 +346,8 @@ try {
 | Code | HTTP | Description |
 |------|------|-------------|
 | `MISSING_API_KEY` | — | `apiKey` was not provided to constructor |
-| `MISSING_SKILL_ID` | — | `skillId` was not provided to constructor |
 | `INVALID_API_KEY` | 401 | API Key is invalid or expired |
-| `SKILL_NOT_FOUND` | 404 | Skill not found or has been disabled |
+| `SKILL_NOT_FOUND` | 404 | Skill not found or disabled — check your API Key |
 | `CUSTOM_CHARGE_DISABLED` | 403 | Skill does not support one-time billing |
 | `INVALID_BILLING_MODE` | 400 | Wrong billing method called for this Skill type |
 | `RATE_LIMITED` | 429 | Too many requests |

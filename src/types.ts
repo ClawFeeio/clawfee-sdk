@@ -1,8 +1,8 @@
 export interface ClawFeeConfig {
   /** Required. API Key for the Skill (from env CLAWFEE_API_KEY) */
   apiKey: string
-  /** Required. Skill ID (from env CLAWFEE_SKILL_ID) */
-  skillId: string
+  /** @deprecated No longer required. Kept for backward compatibility only — passing it is harmless but has no effect. */
+  skillId?: string
   /** Optional. Base URL for the API, defaults to 'https://clawfee.io/api/v1' */
   baseUrl?: string
   /** Optional. Request timeout in milliseconds, defaults to 10000 */
@@ -37,6 +37,10 @@ export interface ChargeResult {
   chargedAmount?: number
   /** Transaction ID (only present when charged=true) */
   transactionId?: string
+  /** Number of calls remaining in subscription quota (subscription mode only) */
+  callsRemaining?: number
+  /** Charge source: 'subscription' when quota is used, undefined for per-call */
+  source?: string
   /** Payment URL (only present when charged=false and balance is insufficient) */
   paymentUrl?: string
   /** Subscribe URL (only present when charged=false and reason is subscription_required) */
@@ -81,7 +85,6 @@ export interface ChargeCustomResult {
 
 export interface ResolvedConfig {
   apiKey: string
-  skillId: string
   baseUrl: string
   timeout: number
   cache: { enabled: boolean; ttl: number }
